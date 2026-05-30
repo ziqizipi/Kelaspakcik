@@ -1,26 +1,23 @@
 "use client"
 
-import { useState } from "react"
 import useSWR from "swr"
 import Link from "next/link"
+import {
+  ShoppingCart,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  Send,
+  BarChart3,
+  MessageSquare,
+  Users,
+  Zap,
+  ArrowRight,
+  Clock,
+} from "lucide-react"
+import { KPICard, PageHeader, StatusBadge, IntentBadge, Card } from "@/components/design-system"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
-
-interface Customer {
-  id: string
-  name: string
-  phone: string
-}
-
-interface Conversation {
-  id: string
-  status: string
-  lastMessageAt: string
-  customer: Customer
-  _count: {
-    messages: number
-  }
-}
 
 interface Metrics {
   totalOrders: number
@@ -35,232 +32,254 @@ interface Metrics {
   aiInsight: string
 }
 
+interface ActivityItem {
+  id: string
+  type: "order" | "conversation" | "customer"
+  description: string
+  time: string
+  status?: string
+  intent?: string
+}
+
+interface ActivityResponse {
+  activities: ActivityItem[]
+}
+
+function formatRupiah(num: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num)
+}
+
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"ALL" | "WAITING" | "ESCALATED" | "CLOSED">("ALL")
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
-
-  // Fetch metrics data
-  const { data: metrics } = useSWR<Metrics>("/api/metrics", fetcher, {
-    refreshInterval: 15000,
+  const { data: metrics, error, isLoading, mutate } = useSWR<Metrics>("/api/metrics", fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
   })
 
-  // Fetch conversations data
-  const { data: conversationsData } = useSWR<{ conversations: Conversation[] }>(
-    "/api/conversations",
-    fetcher,
-    {
-      refreshInterval: 15000,
-    }
-  )
-
-  const conversations = conversationsData?.conversations || []
-
-  // Filter conversations based on selected tab
-  const filteredConversations = conversations.filter((c) => {
-    if (activeTab === "ALL") return true
-    if (activeTab === "CLOSED") return c.status === "closed"
-    if (activeTab === "ESCALATED") return c.status === "escalated"
-    if (activeTab === "WAITING") return c.status === "waiting" || c.status === "open"
-    return true
+  const { data: activityData } = useSWR<ActivityResponse>("/api/activity", fetcher, {
+    refreshInterval: 30000,
   })
 
-  // Safe formatting helpers
-  const totalRevenue = metrics?.totalRevenue || 0
-  const totalOrders = metrics?.totalOrders || 0
-  const deflectionRate = metrics?.aiDeflectionRate || "91"
-  const deflectionTrend = metrics?.deflectionTrend || "↑ Sangat baik"
-  const waitingCount = metrics?.waitingCount || 0
-  const openCount = metrics?.openConversations || 0
+  const activities = activityData?.activities || []
+
+  const kpiCards = metrics
+    ? [
+        {
+          label: "Total Pesanan",
+          value: metrics.totalOrders.toLocaleString("id-ID"),
+          trend: metrics.totalOrdersTrend,
+          trendPositive: metrics.totalOrdersTrend.startsWith("↑"),
+          icon: <ShoppingCart size={18} />,
+        },
+        {
+          label: "Revenue",
+          value: formatRupiah(metrics.totalRevenue),
+          trend: metrics.revenueTrend,
+          trendPositive: metrics.revenueTrend.startsWith("↑"),
+          icon: <TrendingUp size={18} />,
+        },
+        {
+          label: "Percakapan Aktif",
+          value: metrics.openConversations.toLocaleString("id-ID"),
+          trend: metrics.conversationsTrend,
+          trendPositive: !metrics.conversationsTrend.startsWith("↓"),
+          icon: <MessageSquare size={18} />,
+        },
+        {
+          label: "Menunggu Respons",
+          value: metrics.waitingCount.toLocaleString("id-ID"),
+          icon: <Users size={18} />,
+        },
+        {
+          label: "AI Deflection",
+          value: `${metrics.aiDeflectionRate}%`,
+          trend: metrics.deflectionTrend,
+          trendPositive: metrics.deflectionTrend.startsWith("↑"),
+          icon: <Zap size={18} />,
+        },
+      ]
+    : []
 
   return (
-    <div className="min-h-screen bg-[#f7f5f2] p-8 md:p-12">
-      {/* Editorial Header */}
-      <div className="mb-8">
-        <div className="text-[11px] font-bold text-[#3a7a55] uppercase tracking-[0.15em] mb-2 flex items-center gap-2">
-          <span className="w-5 h-[1px] bg-[#3a7a55]"></span>
-          Pusat Komando
+    <div className="min-h-screen bg-[#fafaf8]">
+      {/* Top Bar */}
+      <div className="bg-white border-b border-[#e5e2dd] px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1
+            className="text-2xl font-semibold text-[#111111]"
+            style={{ fontFamily: "'Instrument Serif', serif" }}
+          >
+            Dashboard
+          </h1>
+          <p className="text-sm text-[#8a8580] mt-0.5">
+            {new Date().toLocaleDateString("id-ID", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
         </div>
-        <h1 className="bb-page-title mb-1">
-          Kotak <em>Masuk</em>
-        </h1>
-        <p className="text-sm text-[#888] italic">
-          Pantau dan respon percakapan WhatsApp secara real-time.
-        </p>
-      </div>
-
-      {/* Editorial KPI Stat Rows */}
-      <div className="bb-stats">
-        <div className="bb-stat">
-          <div className="bb-stat-val">{openCount}</div>
-          <div className="bb-stat-label">Chat Aktif Hari Ini</div>
-          <div className="bb-stat-trend">{metrics?.conversationsTrend || "↑ 12% dari kemarin"}</div>
-        </div>
-        <div className="bb-stat">
-          <div className="bb-stat-val">{deflectionRate}%</div>
-          <div className="bb-stat-label">Tingkat Auto-Reply</div>
-          <div className="bb-stat-trend">{deflectionTrend}</div>
-        </div>
-        <div className="bb-stat">
-          <div className="bb-stat-val">{totalOrders}</div>
-          <div className="bb-stat-label">Total Pesanan</div>
-          <div className="bb-stat-trend">{metrics?.totalOrdersTrend || "↑ 8 dari kemarin"}</div>
-        </div>
-        <div className="bb-stat">
-          <div className="bb-stat-val">3m</div>
-          <div className="bb-stat-label">Rata-rata Respons AI</div>
-          <div className="bb-stat-trend">↓ Lebih cepat</div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => mutate()}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#e5e2dd] bg-white hover:bg-[#f5f4f0] text-[#404942] text-sm transition-all"
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </button>
         </div>
       </div>
 
-      {/* Main Split Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-        {/* Left Card: Active Conversations Inbox List */}
-        <div className="bb-card">
-          <div className="bb-card-header flex-col md:flex-row gap-4">
-            <div className="bb-card-title text-base">Percakapan Aktif</div>
-            <div className="bb-tabs">
-              <button
-                onClick={() => setActiveTab("ALL")}
-                className={`bb-tab ${activeTab === "ALL" ? "active" : ""}`}
-              >
-                Semua
-              </button>
-              <button
-                onClick={() => setActiveTab("WAITING")}
-                className={`bb-tab ${activeTab === "WAITING" ? "active" : ""}`}
-              >
-                Belum Dibalas
-              </button>
-              <button
-                onClick={() => setActiveTab("ESCALATED")}
-                className={`bb-tab ${activeTab === "ESCALATED" ? "active" : ""}`}
-              >
-                Eskalasi
-              </button>
-              <button
-                onClick={() => setActiveTab("CLOSED")}
-                className={`bb-tab ${activeTab === "CLOSED" ? "active" : ""}`}
-              >
-                Selesai
-              </button>
-            </div>
-          </div>
-
-          {filteredConversations.length === 0 ? (
-            <div className="bb-empty">
-              <div className="bb-empty-icon">
-                <span className="material-symbols-outlined text-gray-400">chat_bubble_outline</span>
-              </div>
-              <h3>Tidak ada percakapan</h3>
-              <p>
-                Belum ada pesan masuk di folder ini. Percakapan baru akan muncul secara otomatis di sini.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#f0ede8] -mx-6 -mb-6">
-              {filteredConversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={`p-5 flex items-center justify-between cursor-pointer transition-colors hover:bg-[#f7f5f2] ${
-                    selectedConversation?.id === conv.id ? "bg-[#f0ede8]/50" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#3a7a55]/10 flex items-center justify-center text-[#3a7a55] font-semibold text-sm">
-                      {conv.customer?.name ? conv.customer.name.substring(0, 2).toUpperCase() : "WA"}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-[#111111]">{conv.customer?.name || "Pelanggan WhatsApp"}</div>
-                      <div className="text-xs text-[#888]">{conv.customer?.phone || "+62 8xx"}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-[#aaa] block mb-1">
-                      {new Date(conv.lastMessageAt).toLocaleTimeString("id-ID", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <span
-                      className={`bb-badge ${
-                        conv.status === "closed"
-                          ? "bb-badge-gray"
-                          : conv.status === "escalated"
-                          ? "bb-badge-red"
-                          : conv.status === "waiting"
-                          ? "bb-badge-orange"
-                          : "bb-badge-green"
-                      }`}
-                    >
-                      {conv.status === "closed"
-                        ? "Selesai"
-                        : conv.status === "escalated"
-                        ? "Eskalasi"
-                        : conv.status === "waiting"
-                        ? "Menunggu"
-                        : "Aktif"}
-                    </span>
-                  </div>
-                </div>
+      <div className="p-6 space-y-6">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <KPICard
+                  key={i}
+                  label=""
+                  value=""
+                  icon={<ShoppingCart size={18} />}
+                  loading
+                />
+              ))
+            : kpiCards.map((card) => (
+                <KPICard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  trend={card.trend}
+                  trendPositive={card.trendPositive}
+                  icon={card.icon}
+                />
               ))}
-            </div>
-          )}
         </div>
 
-        {/* Right Stack Cards: Today Summary + Conversation Details */}
-        <div className="flex flex-col gap-4">
-          {/* Box 1: Ringkasan Hari Ini in Sleek Dark aesthetic */}
-          <div className="bb-card text-white bg-[#111111] border-none shadow-md">
-            <div className="bb-section-label text-white/40 mb-3">Ringkasan Hari Ini</div>
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              <div>
-                <div className="font-serif text-3xl font-light text-white">{waitingCount}</div>
-                <div className="text-xs text-white/50 mt-1">Menunggu Balasan</div>
-              </div>
-              <div>
-                <div className="font-serif text-3xl font-light text-[#6ee7a0]">{deflectionRate}%</div>
-                <div className="text-xs text-white/50 mt-1">Resolusi AI</div>
-              </div>
-            </div>
-          </div>
+        {/* Quick Actions */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href="/bulk-message"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#3a7a55] hover:bg-[#1a5e3a] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          >
+            <Send size={14} />
+            Kirim Pesan Massal
+          </Link>
+          <Link
+            href="/ai-insights"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e5e2dd] hover:bg-[#f5f4f0] text-[#111111] text-sm font-medium rounded-xl transition-colors"
+          >
+            <BarChart3 size={14} />
+            Lihat AI Insights
+          </Link>
+          <Link
+            href="/settings/ai"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e5e2dd] hover:bg-[#f5f4f0] text-[#111111] text-sm font-medium rounded-xl transition-colors"
+          >
+            <Zap size={14} />
+            Pengaturan AI
+          </Link>
+        </div>
 
-          {/* Box 2: Detail Percakapan Panel */}
-          <div className="bb-card">
-            <div className="bb-card-title mb-4">Detail Percakapan</div>
-            {selectedConversation ? (
-              <div className="space-y-4">
-                <div className="pb-3 border-b border-[#f0ede8]">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nama Pelanggan</p>
-                  <p className="text-sm font-semibold text-[#111111] mt-1">{selectedConversation.customer?.name || "Pelanggan WhatsApp"}</p>
-                </div>
-                <div className="pb-3 border-b border-[#f0ede8]">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nomor WhatsApp</p>
-                  <p className="text-sm font-semibold text-[#111111] mt-1">{selectedConversation.customer?.phone || "+62 8xx"}</p>
-                </div>
-                <div className="pb-3 border-b border-[#f0ede8]">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status Percakapan</p>
-                  <span className={`inline-block mt-1 bb-badge ${
-                    selectedConversation.status === "closed" ? "bb-badge-gray" : selectedConversation.status === "escalated" ? "bb-badge-red" : "bb-badge-green"
-                  }`}>
-                    {selectedConversation.status.toUpperCase()}
+        {/* AI Insight Card */}
+        {metrics?.aiInsight && (
+          <Card className="!p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-[#3a7a55]/10 flex items-center justify-center flex-shrink-0">
+                <BarChart3 size={18} className="text-[#3a7a55]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-[#3a7a55] uppercase tracking-wide">
+                    AI Insight
                   </span>
                 </div>
-                <Link
-                  href="/conversations"
-                  className="bb-btn bb-btn-dark bb-btn-sm w-full justify-center text-center mt-2"
-                >
-                  <span className="material-symbols-outlined text-[16px]">chat</span>
-                  Buka Chat Selengkapnya
-                </Link>
+                <p className="text-sm text-[#404942] leading-relaxed">
+                  {metrics.aiInsight}
+                </p>
               </div>
-            ) : (
-              <div className="text-center py-6">
-                <span className="material-symbols-outlined text-gray-200 text-4xl block mb-2">inbox</span>
-                <p className="text-[13px] text-[#aaa]">Pilih pesan untuk melihat detail atau mulai membalas.</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Activity Feed + Recent Conversations */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Activity Feed */}
+          <Card className="!p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#e5e2dd] flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#111111]">Aktivitas Terbaru</h2>
+              <Link
+                href="/conversations"
+                className="text-xs text-[#3a7a55] hover:text-[#1a5e3a] font-medium flex items-center gap-1 transition-colors"
+              >
+                Lihat semua <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="divide-y divide-[#f0ede8]">
+              {activities.length === 0 ? (
+                <div className="py-8 text-center">
+                  <div className="w-10 h-10 rounded-2xl bg-[#f0ede8] flex items-center justify-center mx-auto mb-3">
+                    <MessageSquare size={18} className="text-[#8a8580]" />
+                  </div>
+                  <p className="text-sm font-medium text-[#111111]">Belum ada aktivitas</p>
+                  <p className="text-xs text-[#8a8580] mt-1">
+                    Aktivitas akan muncul setelah ada percakapan masuk
+                  </p>
+                </div>
+              ) : (
+                activities.slice(0, 6).map((item) => (
+                  <div key={item.id} className="px-5 py-3.5 flex items-start gap-3 hover:bg-[#f5f4f0] transition-colors">
+                    <div className="w-8 h-8 rounded-xl bg-[#f0ede8] flex items-center justify-center flex-shrink-0">
+                      {item.type === "order" ? (
+                        <ShoppingCart size={14} className="text-[#8a8580]" />
+                      ) : (
+                        <MessageSquare size={14} className="text-[#8a8580]" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#111111] truncate">{item.description}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-[#8a8580] flex items-center gap-1">
+                          <Clock size={10} />
+                          {item.time}
+                        </span>
+                        {item.intent && <IntentBadge intent={item.intent} />}
+                        {item.status && <StatusBadge status={item.status} label={item.status} />}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+
+          {/* Top Customers */}
+          <Card className="!p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#e5e2dd] flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#111111]">Pelanggan Aktif</h2>
+              <Link
+                href="/customers"
+                className="text-xs text-[#3a7a55] hover:text-[#1a5e3a] font-medium flex items-center gap-1 transition-colors"
+              >
+                Lihat semua <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="divide-y divide-[#f0ede8]">
+              <div className="py-8 text-center">
+                <div className="w-10 h-10 rounded-2xl bg-[#f0ede8] flex items-center justify-center mx-auto mb-3">
+                  <Users size={18} className="text-[#8a8580]" />
+                </div>
+                <p className="text-sm font-medium text-[#111111]">Pelanggan terbaru</p>
+                <p className="text-xs text-[#8a8580] mt-1">
+                  Lihat daftar pelanggan lengkap di halaman Pelanggan
+                </p>
               </div>
-            )}
-          </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>

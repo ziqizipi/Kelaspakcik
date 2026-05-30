@@ -14,13 +14,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const userId = (session as any)?.user?.id
-  if (!userId) {
-    return NextResponse.json({ error: "Invalid session" }, { status: 400 })
-  }
-
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { id: session.userId },
     select: {
       id: true,
       name: true,
@@ -52,12 +47,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const userId = (session as any)?.user?.id
-  const businessId = (session as any)?.user?.businessId
-  if (!userId) {
-    return NextResponse.json({ error: "Invalid session" }, { status: 400 })
-  }
-
   const parsed = UpdateSchema.safeParse(await req.json())
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 })
@@ -68,15 +57,15 @@ export async function PATCH(req: NextRequest) {
   // Update user name
   if (name) {
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: session.userId },
       data: { name },
     })
   }
 
   // Update business name if provided
-  if (businessName && businessId) {
+  if (businessName) {
     await prisma.business.update({
-      where: { id: businessId },
+      where: { id: session.businessId },
       data: { name: businessName },
     })
   }

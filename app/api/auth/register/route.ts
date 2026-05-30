@@ -3,7 +3,6 @@ import { z } from "zod"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { createSession, setSessionCookie } from "@/lib/session"
-import { API_VERSION } from "@/lib/api-version"
 
 const RegisterSchema = z.object({
   name: z.string().min(1),
@@ -16,26 +15,20 @@ export async function POST(req: NextRequest) {
   try {
     const parsed = RegisterSchema.safeParse(await req.json())
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Data tidak valid", details: parsed.error.flatten() },
-        { status: 400, headers: { "X-API-Version": API_VERSION } }
-      )
+      return NextResponse.json({ error: "Data tidak valid", details: parsed.error.flatten() }, { status: 400 })
     }
 
     const { name, email, password, businessName } = parsed.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
-      return NextResponse.json(
-        { error: "Email sudah terdaftar" },
-        { status: 409, headers: { "X-API-Version": API_VERSION } }
-      )
+      return NextResponse.json({ error: "Email sudah terdaftar" }, { status: 409 })
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
     const business = await prisma.business.create({
-      data: { name: businessName },
+      data: { name: businessName }
     })
 
     const user = await prisma.user.create({
@@ -45,7 +38,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         role: "owner",
         businessId: business.id,
-      },
+      }
     })
 
     const token = await createSession({
@@ -56,17 +49,11 @@ export async function POST(req: NextRequest) {
       businessId: user.businessId,
     })
 
-    const response = NextResponse.json(
-      { success: true },
-      { status: 201, headers: { "X-API-Version": API_VERSION } }
-    )
+    const response = NextResponse.json({ success: true }, { status: 201 })
     setSessionCookie(response, token)
     return response
   } catch (error) {
     console.error("[Register] Error:", error)
-    return NextResponse.json(
-      { error: "Registrasi gagal" },
-      { status: 500, headers: { "X-API-Version": API_VERSION } }
-    )
+    return NextResponse.json({ error: "Registrasi gagal" }, { status: 500 })
   }
 }

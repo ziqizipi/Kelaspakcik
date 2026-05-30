@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react"
 export default function LogoutPage() {
   useEffect(() => {
     fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-      window.location.href = "/login"
+      window.location.href = "/"
     })
   }, [])
 

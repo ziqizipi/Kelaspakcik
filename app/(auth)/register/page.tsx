@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, ArrowRight, Check } from "lucide-react"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [businessName, setBusinessName] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -19,197 +20,212 @@ export default function RegisterPage() {
     e.preventDefault()
     setError("")
 
+    if (password !== confirmPassword) {
+      setError("Password tidak cocok")
+      return
+    }
+
     if (password.length < 8) {
-      setError("Kata sandi minimal harus 8 karakter.")
+      setError("Password minimal 8 karakter")
       return
     }
 
     setLoading(true)
 
     try {
-      const res = await fetch("/api/auth/register", {
+      const registerRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, businessName }),
       })
+      const registerData = await registerRes.json()
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || "Pendaftaran gagal.")
+      if (!registerRes.ok) {
+        setError(registerData.error || "Registrasi gagal")
         setLoading(false)
         return
       }
 
-      // Successful registration, redirect to login page
       router.push("/login?registered=true")
     } catch {
-      setError("Terjadi kesalahan sistem saat mendaftar.")
+      setError("Terjadi kesalahan. Coba lagi.")
       setLoading(false)
     }
   }
 
+  const benefits = [
+    "AI auto-reply 24/7 untuk WhatsApp",
+    "Klasifikasi intent pelanggan otomatis",
+    "Dashboard analytics real-time",
+    "Gratisselama 14 hari, tanpa kartu kredit",
+  ]
+
   return (
-    <div className="auth-root min-h-screen flex flex-col bg-[#f7f5f2]">
-      {/* Auth Navigation */}
-      <nav className="auth-nav flex justify-between items-center px-8 md:px-14 border-b border-[#e5e2dd] bg-[#f7f5f2]/90 backdrop-blur-md sticky top-0 z-50 h-[68px]">
-        <Link href="/" className="auth-nav-logo no-underline text-[#111111] font-bold text-lg">
-          BalasBro<span className="text-[#25D366]">.ai</span>
-        </Link>
-        <Link href="/login" className="auth-nav-link no-underline text-[#111111] font-semibold text-sm border border-[#ccc] px-5 py-2 rounded-lg hover:border-[#111] hover:bg-[#ede9e3] transition-all">
-          Masuk
-        </Link>
-      </nav>
-
-      {/* Main Form Sheet */}
-      <main className="auth-main flex-1 flex items-center justify-center py-16 px-6">
-        <div className="auth-card bg-white border border-[#e5e2dd] shadow-lg rounded-[20px] p-10 md:p-12 w-full max-w-[460px] animate-scale-up">
-          <div className="auth-card-label text-[11px] font-bold tracking-wider text-gray-400 uppercase mb-4 font-sans">
-            BalasBro.ai
+    <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2.5 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-[#3a7a55] flex items-center justify-center shadow-sm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span
+              className="text-2xl font-semibold text-[#111111]"
+              style={{ fontFamily: "'Instrument Serif', serif" }}
+            >
+              BalasBro.ai
+            </span>
           </div>
-          <h2 className="font-serif text-3xl font-light text-[#111111] mb-2 leading-snug">
-            Mulai <em className="not-italic italic text-[#3a7a55]">Otomatisasi</em><br />
-            Bisnis Anda.
-          </h2>
-          <p className="auth-sub text-sm text-gray-500 mb-8 font-sans">
-            Langkah pertama menuju efisiensi operasional yang cerdas.
-          </p>
+          <p className="text-sm text-[#8a8580]">Buat workspace baru untuk bisnis Anda</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="auth-form space-y-4">
-            {/* Full Name */}
-            <div className="form-group flex flex-col gap-1.5">
-              <label className="form-label text-xs font-semibold text-[#333]" htmlFor="name">
+        {/* Benefits strip */}
+        <div className="bg-white rounded-2xl border border-[#e5e2dd] p-4 mb-4 flex items-start gap-3">
+          <div className="flex-1 space-y-2">
+            {benefits.map((benefit, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-[#dcfce7] flex items-center justify-center flex-shrink-0">
+                  <Check size={12} className="text-[#16a34a]" />
+                </div>
+                <span className="text-xs text-[#404942]">{benefit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-[#e5e2dd] p-6 shadow-[0_4px_24px_rgba(0,69,38,0.06)]">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#404942] mb-1.5 uppercase tracking-wide">
                 Nama Lengkap
               </label>
-              <div className="input-wrap relative">
-                <span className="material-symbols-outlined input-icon absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                  person
-                </span>
-                <input
-                  type="text"
-                  id="name"
-                  placeholder="Nama Anda"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-[#f7f5f2] border border-[#e0ddd8] rounded-lg text-sm text-[#111] placeholder-gray-400 focus:outline-none focus:border-[#3a7a55] focus:bg-white font-sans transition-all"
-                />
-              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ahmad Wijaya"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-[#e5e2dd] bg-[#fafaf8] text-[#111111] text-sm placeholder:text-[#8a8580] focus:outline-none focus:ring-2 focus:ring-[#3a7a55]/20 focus:border-[#3a7a55] transition-all"
+              />
             </div>
 
-            {/* Business Name */}
-            <div className="form-group flex flex-col gap-1.5">
-              <label className="form-label text-xs font-semibold text-[#333]" htmlFor="businessName">
-                Nama Bisnis
-              </label>
-              <div className="input-wrap relative">
-                <span className="material-symbols-outlined input-icon absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                  store
-                </span>
-                <input
-                  type="text"
-                  id="businessName"
-                  placeholder="Nama toko atau perusahaan"
-                  required
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-[#f7f5f2] border border-[#e0ddd8] rounded-lg text-sm text-[#111] placeholder-gray-400 focus:outline-none focus:border-[#3a7a55] focus:bg-white font-sans transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="form-group flex flex-col gap-1.5">
-              <label className="form-label text-xs font-semibold text-[#333]" htmlFor="email">
+            <div>
+              <label className="block text-xs font-semibold text-[#404942] mb-1.5 uppercase tracking-wide">
                 Email
               </label>
-              <div className="input-wrap relative">
-                <span className="material-symbols-outlined input-icon absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                  mail
-                </span>
-                <input
-                  type="email"
-                  id="email"
-                  placeholder="nama@bisnis.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-[#f7f5f2] border border-[#e0ddd8] rounded-lg text-sm text-[#111] placeholder-gray-400 focus:outline-none focus:border-[#3a7a55] focus:bg-white font-sans transition-all"
-                />
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ahmad@wijaya.id"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-[#e5e2dd] bg-[#fafaf8] text-[#111111] text-sm placeholder:text-[#8a8580] focus:outline-none focus:ring-2 focus:ring-[#3a7a55]/20 focus:border-[#3a7a55] transition-all"
+              />
             </div>
 
-            {/* Password */}
-            <div className="form-group flex flex-col gap-1.5">
-              <label className="form-label text-xs font-semibold text-[#333]" htmlFor="password">
-                Kata Sandi
+            <div>
+              <label className="block text-xs font-semibold text-[#404942] mb-1.5 uppercase tracking-wide">
+                Nama Bisnis
               </label>
-              <div className="input-wrap relative">
-                <span className="material-symbols-outlined input-icon absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                  lock
-                </span>
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Wijaya Elektronik"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-[#e5e2dd] bg-[#fafaf8] text-[#111111] text-sm placeholder:text-[#8a8580] focus:outline-none focus:ring-2 focus:ring-[#3a7a55]/20 focus:border-[#3a7a55] transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#404942] mb-1.5 uppercase tracking-wide">
+                Password
+              </label>
+              <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  id="password"
-                  placeholder="Min. 8 karakter"
-                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-11 py-3 bg-[#f7f5f2] border border-[#e0ddd8] rounded-lg text-sm text-[#111] placeholder-gray-400 focus:outline-none focus:border-[#3a7a55] focus:bg-white font-sans transition-all"
+                  placeholder="Min. 8 karakter"
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-3 pr-10 rounded-xl border border-[#e5e2dd] bg-[#fafaf8] text-[#111111] text-sm placeholder:text-[#8a8580] focus:outline-none focus:ring-2 focus:ring-[#3a7a55]/20 focus:border-[#3a7a55] transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="toggle-pw absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 bg-transparent border-none outline-none p-1 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8a8580] hover:text-[#404942] transition-colors p-1"
                 >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {showPassword ? "visibility_off" : "visibility"}
-                  </span>
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {/* Error alerts */}
+            <div>
+              <label className="block text-xs font-semibold text-[#404942] mb-1.5 uppercase tracking-wide">
+                Konfirmasi Password
+              </label>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Masukkan ulang password"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-[#e5e2dd] bg-[#fafaf8] text-[#111111] text-sm placeholder:text-[#8a8580] focus:outline-none focus:ring-2 focus:ring-[#3a7a55]/20 focus:border-[#3a7a55] transition-all"
+              />
+            </div>
+
             {error && (
-              <div className="bg-[#fee2e2] border border-[#fecaca] rounded-lg px-4 py-3 text-xs text-[#dc2626] font-sans">
+              <div className="bg-[#fee2e2] border border-[#fecaca] rounded-xl px-4 py-3 text-sm text-[#dc2626]">
                 {error}
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="auth-submit w-full py-3.5 bg-[#111111] hover:bg-[#222] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-sm font-semibold cursor-pointer shadow-md transition-all duration-200"
+              className="w-full py-3 px-4 bg-[#3a7a55] hover:bg-[#1a5e3a] disabled:bg-[#f0ede8] text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
             >
               {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="animate-spin text-white" size={16} />
-                  <span>Daftar...</span>
-                </div>
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Membuat akun...
+                </>
               ) : (
-                "Daftar Sekarang"
+                <>
+                  Buat Akun
+                  <ArrowRight size={16} />
+                </>
               )}
             </button>
           </form>
-
-          {/* Card footer redirect */}
-          <div className="auth-footer-note text-center mt-6 text-sm text-gray-500 font-sans">
-            Sudah punya akun?{" "}
-            <Link href="/login" className="text-[#3a7a55] font-bold hover:underline">
-              Masuk di sini
-            </Link>
-          </div>
         </div>
-      </main>
 
-      {/* Auth Footer */}
-      <footer className="auth-footer text-center p-8 border-t border-[#e5e2dd] bg-[#f7f5f2]">
-        <div className="auth-footer-brand font-bold text-sm text-[#111111] mb-1">
-          BalasBro<span className="text-[#25D366]">.ai</span>
-        </div>
-        <p className="text-xs text-gray-400">Intelligent Efficiency for Business. © 2026</p>
-      </footer>
+        <p className="text-center text-sm text-[#8a8580] mt-6">
+          Sudah punya akun?{" "}
+          <Link
+            href="/login"
+            className="text-[#3a7a55] hover:text-[#1a5e3a] font-semibold transition-colors"
+          >
+            Masuk di sini
+          </Link>
+        </p>
+
+        <p className="text-center text-xs text-[#8a8580] mt-4">
+          Dengan mendaftar, Anda menyetujui{" "}
+          <span className="text-[#3a7a55]">Syarat Layanan</span> dan{" "}
+          <span className="text-[#3a7a55]">Kebijakan Privasi</span>
+        </p>
+      </div>
     </div>
   )
 }

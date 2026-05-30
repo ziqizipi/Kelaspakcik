@@ -1,5 +1,3 @@
-import { getSession } from "@/auth"
-import { redirect } from "next/navigation"
 import { NavBar } from "@/components/landing/nav-bar"
 import { HeroSection } from "@/components/landing/hero-section"
 import { LogoBar } from "@/components/landing/logo-bar"
@@ -12,11 +10,6 @@ import { Footer } from "@/components/landing/footer"
 import { FloatingWhatsAppWidget } from "@/components/landing/floating-whatsapp-widget"
 
 export default async function RootPage() {
-  const session = await getSession()
-  if (session) {
-    redirect("/dashboard")
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
