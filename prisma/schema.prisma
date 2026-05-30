@@ -1,0 +1,314 @@
+// Balas.ai — Customer Response & Order Handling Platform
+// WhatsApp-first AI-powered platform for Indonesian MSMEs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE: Business + Auth
+// ============================================
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  industry  String?
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  twilioAccounts TwilioAccount[]
+  customers      Customer[]
+  conversations  Conversation[]
+  orders         Order[]
+  products       Product[]
+  flows          Flow[]
+  escalations    EscalationRule[]
+  dailySummaries DailySummary[]
+  aiAutoReplyConfig AIAutoReplyConfig?
+}
+
+// NextAuth required models
+model User {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  password   String
+  name       String
+  role       String    @default("staff") // owner | admin | staff
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  accounts   Account[]
+  sessions   Session[]
+
+  mfaEnabled       Boolean @default(false)
+  mfaSecret        String?
+  mfaRecoveryCodes String?
+  passwordVersion  Int     @default(0)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// TWILIO WHATSAPP
+// ============================================
+
+model TwilioAccount {
+  id                  String         @id @default(cuid())
+  accountSid          String         @unique
+  authToken           String
+  whatsappNumber      String
+  messagingServiceSid String?
+  businessName        String?
+  webhookVerifyToken  String         @default(cuid())
+  isActive            Boolean        @default(true)
+  businessId          String
+  business            Business       @relation(fields: [businessId], references: [id])
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  conversations      Conversation[]
+}
+
+// ============================================
+// CUSTOMER + CONVERSATION
+// ============================================
+
+model Customer {
+  id            String         @id @default(cuid())
+  name          String?
+  phone         String
+  waId          String?
+  profilePicUrl String?
+  lastMessageAt DateTime?
+  businessId    String
+  deletedAt     DateTime?      @default(dbgenerated("NULL"))
+  business      Business       @relation(fields: [businessId], references: [id])
+  conversations Conversation[]
+  orders        Order[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([businessId, phone])
+  @@index([businessId])
+}
+
+model Conversation {
+  id            String          @id @default(cuid())
+  twilioAccountId   String
+  twilioAccount     TwilioAccount @relation(fields: [twilioAccountId], references: [id])
+  customerId    String
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  businessId    String
+  deletedAt     DateTime?       @default(dbgenerated("NULL"))
+  business      Business        @relation(fields: [businessId], references: [id])
+  status        String          @default("open")
+  assigneeId    String?
+  lastMessageAt DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  messages      Message[]
+  order         Order?
+
+  @@index([status])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id               String       @id @default(cuid())
+  conversationId   String
+  conversation     Conversation @relation(fields: [conversationId], references: [id])
+  direction        String
+  content          String
+  waMsgId          String?
+  fromNumber       String?
+  toNumber         String?
+  status           String       @default("delivered")
+  intent           String?
+  intentConfidence Float?
+  aiReplyUsed      Boolean      @default(false)
+  repliedBy        String?
+  createdAt        DateTime     @default(now())
+
+  @@index([conversationId, direction])
+  @@index([createdAt])
+  @@index([direction])
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+model Order {
+  id             String       @id @default(cuid())
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id])
+  businessId     String
+  deletedAt      DateTime?    @default(dbgenerated("NULL"))
+  business       Business     @relation(fields: [businessId], references: [id])
+  type           String
+  amount         Decimal      @db.Decimal(12, 2)
+  category       String
+  description    String?
+  items          Json?
+  paymentStatus  String       @default("recorded")
+  recordedAt     DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([businessId, createdAt])
+  @@index([businessId, type])
+}
+
+// ============================================
+// PRODUCTS
+// ============================================
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  sku          String?
+  description  String?
+  price        Decimal  @db.Decimal(12, 2)
+  cost         Decimal? @db.Decimal(12, 2)
+  qty          Int      @default(0)
+  reorderPoint Int      @default(5)
+  imageUrl     String?
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ============================================
+// SOP / FLOW BUILDER
+// ============================================
+
+model Flow {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  nodes       Json
+  edges       Json
+  isActive    Boolean         @default(true)
+  businessId  String
+  business    Business        @relation(fields: [businessId], references: [id])
+  executions  FlowExecution[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model FlowExecution {
+  id             String    @id @default(cuid())
+  flowId         String
+  flow           Flow      @relation(fields: [flowId], references: [id])
+  conversationId String
+  triggeredBy    String
+  status         String    @default("running")
+  context        Json?
+  businessId     String
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+// ============================================
+// ESCALATION
+// ============================================
+
+model EscalationRule {
+  id              String   @id @default(cuid())
+  name            String
+  type            String
+  keywords        String[]
+  minOrderValue   Decimal? @db.Decimal(12, 2)
+  notifyVia       String   @default("whatsapp")
+  notifyUserId    String?
+  messageTemplate String?
+  isActive        Boolean  @default(true)
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// DAILY RECAP & INSIGHTS
+// ============================================
+
+model DailySummary {
+  id                String    @id @default(cuid())
+  date              DateTime  @db.Date
+  businessId        String
+  business          Business  @relation(fields: [businessId], references: [id])
+  totalOrders       Int       @default(0)
+  totalRevenue      Decimal   @db.Decimal(12, 2)
+  totalExpense      Decimal   @db.Decimal(12, 2)
+  totalMessages     Int       @default(0)
+  newCustomers      Int       @default(0)
+  openConversations Int       @default(0)
+  topProducts       Json?
+  insightText       String?
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@unique([businessId, date])
+}
+
+// ============================================
+// AI REPLY CONFIGS
+// ============================================
+
+model AIAutoReplyConfig {
+  id               String   @id @default(cuid())
+  businessId       String   @unique
+  business         Business @relation(fields: [businessId], references: [id])
+  isEnabled        Boolean  @default(true)
+  tone             String   @default("friendly")
+  sopContext       String?
+  fineTunedModelId String?
+  fallbackReply    String?
+  workingHours     Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

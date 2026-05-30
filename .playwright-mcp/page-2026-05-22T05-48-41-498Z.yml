@@ -1,0 +1,57 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - link "BalasBro.ai" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - link "Daftar" [ref=e5] [cursor=pointer]:
+        - /url: /register
+    - main [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: BalasBro.ai
+        - heading "Selamat Datang Kembali." [level=2] [ref=e9]:
+          - text: Selamat Datang
+          - emphasis [ref=e10]: Kembali.
+        - paragraph [ref=e11]: Masuk ke akun Anda untuk melanjutkan otomatisasi bisnis Anda.
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: Email
+            - generic [ref=e15]:
+              - generic: mail
+              - textbox "Email" [ref=e16]:
+                - /placeholder: nama@bisnis.com
+          - generic [ref=e17]:
+            - generic [ref=e18]:
+              - generic [ref=e19]: Kata Sandi
+              - generic [ref=e20] [cursor=pointer]: Lupa Kata Sandi?
+            - generic [ref=e21]:
+              - generic: lock
+              - textbox "Kata Sandi" [ref=e22]:
+                - /placeholder: ••••••••
+              - button "visibility" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - checkbox "Ingat saya di perangkat ini" [ref=e25] [cursor=pointer]
+            - generic [ref=e26] [cursor=pointer]: Ingat saya di perangkat ini
+          - button "Masuk" [ref=e27] [cursor=pointer]
+        - generic [ref=e29]: atau lanjut dengan
+        - button "Lanjutkan dengan Google" [active] [ref=e30] [cursor=pointer]:
+          - img [ref=e31]
+          - text: Lanjutkan dengan Google
+        - paragraph [ref=e36]:
+          - text: Belum punya akun?
+          - link "Daftar Sekarang" [ref=e37] [cursor=pointer]:
+            - /url: /register
+    - contentinfo [ref=e38]:
+      - generic [ref=e39]: BalasBro.ai
+      - paragraph [ref=e40]: Intelligent Efficiency for Business. © 2026
+  - generic [ref=e45] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e46]:
+      - img [ref=e47]
+    - generic [ref=e51]:
+      - button "Open issues overlay" [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: "0"
+          - generic [ref=e55]: "1"
+        - generic [ref=e56]: Issue
+      - button "Collapse issues badge" [ref=e57]:
+        - img [ref=e58]
+  - alert [ref=e50]
